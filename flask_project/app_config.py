@@ -28,6 +28,9 @@ class Config(object):
     # CAMPAIGN DATA
     campaigner_data_folder = "./campaign_manager/static"
 
+    # DATABASE URL
+    DATABASE_URL = os.environ['DATABASE_URL']
+
 
 class ProductionConfig(Config):
     """Production environment.
