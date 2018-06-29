@@ -16,6 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import and_, or_
 from sqlalchemy.sql.expression import true
 from geoalchemy2 import Geometry
@@ -72,7 +73,7 @@ featureTypeAssociations = Table(
     Column(
         'feature_id',
         Integer,
-        ForeignKey('attribute.id'),
+        ForeignKey('tag.id'),
         primary_key=True
         ),
     Column(
@@ -112,6 +113,21 @@ functionCampaignAssociations = Table(
         'function_id',
         Integer,
         ForeignKey('function.id')
+        )
+    )
+
+functionAttributeAssociations = Table(
+    'functionAttributeAssociations',
+    Base.metadata,
+    Column(
+        'function_id',
+        Integer,
+        ForeignKey('function.id')
+        ),
+    Column(
+        'attribute_id',
+        Integer,
+        ForeignKey('attribute.id')
         )
     )
 
@@ -278,7 +294,7 @@ class Campaign(Base):
         )
     version = Column(Integer)
     uuid = Column(String(100))
-    remote_projects = Column(String(30))
+    remote_projects = Column(ARRAY(String(100)))
     map_type = Column(String(20))
     thumbnail = Column(String(100))
 
@@ -334,6 +350,18 @@ class Campaign(Base):
             TaskBoundary.campaign_id == self.id
             ).first()
 
+    def get_participant_count(uuid):
+        """ Returns the participant count for the campaign """
+        participant_count = 0
+        campaign = session.query(Campaign).filter(
+            Campaign.uuid == uuid).fisrt()
+        # add all managers to the participant count
+        participant_count += len(campaign.users)
+        # add all team members to the participant count
+        for task_boundary in campaign.task_boundaries:
+            participant_count += len(task_boundary.teams.users)
+        return participant_count
+
     def update(self, campaign_dto):
         """ Updates and saves the model object """
         from datetime import datetime
@@ -345,6 +373,8 @@ class Campaign(Base):
             self.start_date = campaign_dto['start_date']
         if campaign_dto['end_date']:
             self.end_date = campaign_dto['end_date']
+        if campaign_dto['remote_projects']:
+            self.remote_projects = campaign_dto['remote_projects']
         self.create_on = datetime.now()
         session.commit()
 
@@ -500,8 +530,8 @@ class FeatureType(Base):
         lazy='subquery',
         back_populates='feature_types'
         )
-    attributes = relationship(
-        'Attribute',
+    tags = relationship(
+        'Tag',
         secondary=featureTypeAssociations,
         lazy='subquery',
         back_populates='feature_types'
@@ -522,9 +552,9 @@ class FeatureType(Base):
         session.commit()
 
 
-class Attribute(Base):
+class Tag(Base):
 
-    __tablename__ = 'attribute'
+    __tablename__ = 'tag'
 
     id = Column(
         'id',
@@ -532,16 +562,16 @@ class Attribute(Base):
         primary_key=True,
         autoincrement=True
         )
-    attribute_name = Column(String(20))
+    name = Column(String(20))
     feature_types = relationship(
         'FeatureType',
         secondary=featureTypeAssociations,
         lazy='subquery',
-        back_populates='attributes'
+        back_populates='tags'
         )
 
     def __init__(self, **kwargs):
-        super(Attribute, self).__init__(**kwargs)
+        super(Tag, self).__init__(**kwargs)
 
     def create(self):
         """ Creates and saves the current model to DB """
@@ -652,6 +682,12 @@ class Function(Base):
         ForeignKey('featureType.id'),
         nullable=False
         )
+    attributes = relationship(
+        'Attribute',
+        secondary=functionAttributeAssociations,
+        lazy='subquery',
+        back_populates='functions'
+        )
     types = relationship(
         'FeatureType',
         back_populates='function'
@@ -665,6 +701,34 @@ class Function(Base):
 
     def __init__(self, **kwargs):
         super(Function, self).__init__(**kwargs)
+
+    def create(self):
+        """ Creates and saves the current model to DB """
+        session.add(self)
+        session.commit()
+
+
+class Attribute(Base):
+
+    __tablename__ = 'attribute'
+
+    id = Column(
+        'id',
+        Integer,
+        primary_key=True,
+        autoincrement=True
+        )
+    name = Column(String(20))
+    value = Column(ARRAY(String(20)))
+    functions = relationship(
+        'Function',
+        secondary=functionAttributeAssociations,
+        lazy='subquery',
+        back_populates='attributes'
+        )
+
+    def __init__(self, **kwargs):
+        super(Attribute, self).__init__(**kwargs)
 
     def create(self):
         """ Creates and saves the current model to DB """

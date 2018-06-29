@@ -495,21 +495,29 @@ def get_campaign_function(functions):
     function_dict = {}
     i = 1
     for function in functions:
-        function_dict['function-' + str(i)] = {}
+        key = 'function-' + str(i)
+        function_dict[key] = {}
         if(function.name == "FeatureAttributeCompleteness"):
-            function_name = "Feature completeness"
+            function_name = (
+                "Feature completeness for ",
+                function.types.name)
         elif(function.name == "CountFeature"):
-            function_name = "No. of feature in group"
+            function_name = (
+                "No. of feature in group for ",
+                function.types.name)
         elif(function.name == "MapperEngagement"):
             function_name = "Length of mapper engagement"
-        function_dict['function-' + str(i)]['name'] = function_name
-        function_dict['function-' + str(i)]['function'] = function.name
-        function_dict['function-' + str(i)]['feature'] = function.feature
-        function_dict['function-' + str(i)]['type'] = function.types.name
-        function_dict['function-' + str(i)]['attributes'] = {}
-        for tag in function.types.attributes:
-            tag_name = tag.attribute_name
-            function_dict['function-' + str(i)]['attributes'][tag_name] = []
+        function_dict[key]['name'] = function_name
+        function_dict[key]['function'] = function.name
+        function_dict[key]['feature'] = function.feature
+        function_dict[key]['type'] = function.types.name
+        function_dict[key]['attributes'] = {}
+        for attribute in function.attributes:
+            name = attribute.name
+            function_dict[key]['attributes'][name] = []
+            for val in attribute.value:
+                function_dict[key]['attributes'][name].append(val)
+
         i += 1
     return function_dict
 
@@ -534,6 +542,47 @@ def get_campaign_geometry(campaign):
     return geomtery_dict
 
 
+def get_selected_functions_in_string(functions, campaign_obj):
+        """ Get selected function in string
+        :return: Get selected function in string
+        :rtype: str
+        """
+        for key, value in functions.items():
+            try:
+                SelectedFunction = getattr(
+                    insights_functions, value['function'])
+                additional_data = {}
+                if 'type' in value:
+                    additional_data['type'] = value['type']
+                selected_function = SelectedFunction(
+                    campaign_obj,
+                    feature=value['feature'],
+                    required_attributes=value['attributes'],
+                    additional_data=additional_data)
+
+                value['type_required'] = \
+                    ('%s' % selected_function.type_required).lower()
+                value['manager_only'] = selected_function.manager_only
+                value['name'] = selected_function.name()
+            except AttributeError:
+                value = None
+        return json.dumps(functions).replace('None', 'null')
+
+
+def get_campaign_feature_type(feature_types):
+    type_dict = {}
+    i = 1
+    for feature_type in feature_types:
+        type_dict['type-' + str(i)] = {}
+        type_dict['type-' + str(i)]['feature'] = feature_type.feature
+        type_dict['type-' + str(i)]['type'] = feature_type.name
+        type_dict['type-' + str(i)]['tags'] = {}
+        for tag in feature_type.tags:
+            type_dict['type-' + str(i)]['tags'][tag.name] = []
+        i += 1
+    return type_dict
+
+
 @campaign_manager.route('/campaign/<uuid>')
 def get_campaign(uuid):
 
@@ -548,10 +597,16 @@ def get_campaign(uuid):
         context['oauth_secret'] = OAUTH_SECRET
         context['map_provider'] = map_provider()
         functions = campaign_obj.functions
-        context['selected_functions'] = get_campaign_function(functions)
-        # load campaign geomerty
+        functions = get_campaign_function(functions)
+        context['selected_functions'] = get_selected_functions_in_string(
+            functions,
+            campaign_obj
+            )
+        context['campaign_types'] = get_campaign_feature_type(
+            campaign_obj.feature_types
+            )
         context['geometry'] = get_campaign_geometry(campaign_obj)
-
+        context['remote_projects'] = campaign_obj.remote_projects
         # Start date
         try:
             start_date = campaign_obj.start_date
@@ -854,13 +909,13 @@ def save_campaign_feature_types(campaign, data):
             name=name
             )
         featureType.create()
-        # commit attributes for the feature to the database
+        # commit tags for the feature to the database
         for _tag in type_dict['tags']:
-            attribute = Attribute(
-                attribute_name=_tag
+            tag = Tag(
+                name=_tag
                 )
-            attribute.create()
-            featureType.attributes.append(attribute)
+            tag.create()
+            featureType.tags.append(tag)
         session.commit()
         campaign.feature_types.append(featureType)
     session.commit()
@@ -930,6 +985,20 @@ def save_campaign_insight_functions(campaign, data):
             type_id=_type.id
             )
         selected_function.create()
+        for attr in data_function_selected[function]['attributes']:
+            name = attr
+            value = []
+            if len(data_function_selected[function]['attributes'][attr]) != 0:
+                arr = data_function_selected[function]['attributes'][attr]
+                for val in arr:
+                    value.append(val)
+            attribute = Attribute(
+                name=name,
+                value=value
+                )
+            attribute.create()
+            selected_function.attributes.append(attribute)
+        session.commit()
         campaign.functions.append(selected_function)
     session.commit()
 
@@ -995,7 +1064,8 @@ def create_campaign():
             create_on=datetime.now(),
             uuid=data['uuid'],
             version=2,
-            map_type=data['map_type']
+            map_type=data['map_type'],
+            remote_projects=data['remote_projects']
             )
         created_campaign.create()
         save_campaign_feature_types(
@@ -1060,8 +1130,9 @@ def edit_campaign(uuid):
             campaign_types[_.name]["type"] = _.name
             campaign_types[_.name]["feature"] = _.feature
             campaign_types[_.name]["tags"] = {}
-            for x in _.attributes:
-                campaign_types[_.name]['tags'][x.attribute_name] = []
+            for x in _.tags:
+                campaign_types[_.name]['tags'][x.name] = []
+
         if request.method == 'GET':
             form = CampaignForm()
             form.name.data = campaign_obj.name
@@ -1092,7 +1163,8 @@ def edit_campaign(uuid):
                     name=data['name'],
                     description=data['description'],
                     start_date=data['start_date'],
-                    end_date=data['end_date']
+                    end_date=data['end_date'],
+                    remote_projects=data['remote_projects']
                     )
                 campaign_obj.update(campaign_dto)
                 delete_campaign_taskboundaries(campaign_obj)
