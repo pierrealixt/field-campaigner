@@ -14,9 +14,7 @@ from urllib import request as urllibrequest
 from urllib.error import HTTPError, URLError
 
 from bs4 import BeautifulSoup
-from sqlalchemy import and_, or_
 from sqlalchemy.sql.expression import true
-from sqlalchemy.orm import sessionmaker
 from geoalchemy2.shape import from_shape
 from shapely.geometry import asShape
 from flask import (
@@ -65,28 +63,31 @@ except ImportError:
 
 MAX_AREA_SIZE = 320000000
 
-# create session for Database Queries
-Session = sessionmaker(bind=engine)
-Session.configure(bind=engine)
-session = Session()
-session.rollback()
-
 
 @campaign_manager.route('/add_osm_user', methods=['POST'])
 def add_osm_user():
-    user = session.query(User).filter(
-        User.osm_user_id == request.json['username']
-        ).all()
+    user = User()
+    osm_user = user.get_by_osm_id(request.json['username'])
     # add to db if user is new.
-    if len(user) == 0:
+    if osm_user is None:
         new_user = User(osm_user_id=request.json['username'], email='')
-        session.add(new_user)
-        session.commit()
+        new_user.create()
     return (
         json.dumps({'success': True}),
         200,
         {'ContentType': 'application/json'}
         )
+
+
+def campaign_data():
+    session.rollback()
+    campaign = Campaign()
+    all_campaigns = campaign.get_all()
+    active_campaigns = campaign.get_all_active()
+    geometry = []
+    for campaign_obj in all_campaigns:
+        geometry.append(get_campaign_geometry(campaign_obj))
+    return (all_campaigns, active_campaigns, geometry)
 
 
 @campaign_manager.route('/')
@@ -95,15 +96,7 @@ def home():
     On this page a summary campaign manager view will be shown with all active
     campaigns .
     """
-    date = datetime.now().date()
-    campaigns = session.query(Campaign).all()
-    active_campaigns = session.query(Campaign).filter(
-        and_(Campaign.start_date <= date,
-             date <= Campaign.end_date)
-        ).all()
-    geometry = []
-    for campaign in campaigns:
-        geometry.append(get_campaign_geometry(campaign))
+    all_campaigns, active_campaigns, geometry = campaign_data()
 
     context = dict(
         oauth_consumer_key=OAUTH_CONSUMER_KEY,
@@ -112,7 +105,7 @@ def home():
     )
 
     context['active_campaigns'] = len(active_campaigns)
-    context['campaigns'] = campaigns
+    context['campaigns'] = all_campaigns
     context['geometry'] = geometry
     # noinspection PyUnresolvedReferences
     return render_template('index.html', **context)
@@ -124,11 +117,7 @@ def home_all():
     On this page a summary campaign manager view will be shown
     with all campaigns.
     """
-    date = datetime.now().date()
-    campaigns = session.query(Campaign).all()
-    active_campaigns = session.query(Campaign).filter(
-        and_(Campaign.start_date <= date,
-             date <= Campaign.end_date)).all()
+    all_campaigns, active_campaigns, geometry = campaign_data()
 
     context = dict(
         oauth_consumer_key=OAUTH_CONSUMER_KEY,
@@ -137,7 +126,8 @@ def home_all():
         map_provider=map_provider()
     )
     context['active_campaigns'] = len(active_campaigns)
-    context['campaigns'] = campaigns
+    context['campaigns'] = all_campaigns
+    context['geometry'] = geometry
     # noinspection PyUnresolvedReferences
     return render_template('index.html', **context)
 
@@ -148,13 +138,9 @@ def home_inactive():
     On this page a summary campaign manager view will be shown
     with all inactive campaigns.
     """
-    date = datetime.now().date()
-    active_campaigns = session.query(Campaign).filter(
-        and_(Campaign.start_date <= date,
-             date <= Campaign.end_date)).all()
-    inactive_campaigns = session.query(Campaign).filter(
-        or_(Campaign.start_date >= date,
-            date >= Campaign.end_date)).all()
+    campaign = Campaign()
+    all_campaigns, active_campaigns, geometry = campaign_data()
+    inactive_campaigns = campaign.get_all_inactive()
 
     context = dict(
         oauth_consumer_key=OAUTH_CONSUMER_KEY,
@@ -164,7 +150,7 @@ def home_inactive():
 
     context['active_campaigns'] = len(active_campaigns)
     context['campaigns'] = inactive_campaigns
-
+    context['geometry'] = geometry
     # noinspection PyUnresolvedReferences
     return render_template('index.html', **context)
 
@@ -188,13 +174,12 @@ def clean_argument(args):
     return clean_arguments
 
 
-@campaign_manager.route('/check_email/<user>', methods=['GET'])
-def check_user_email(user):
+@campaign_manager.route('/check_email/<username>', methods=['GET'])
+def check_user_email(username):
     email_flag = "registered"
-    user = session.query(User).filter(
-        User.osm_user_id == user
-        ).first()
-    if user.email == '':
+    user = User()
+    osm_user = user.get_by_osm_id(username)
+    if osm_user.email == '':
         email_flag = "not registered"
     return email_flag
 
@@ -204,12 +189,13 @@ def register_user_email():
     from flask import url_for, redirect
     if request.method == "POST":
         data = request.form
-        user = session.query(User).filter(
-            User.osm_user_id ==
-            data['user']
-            ).first()
-        user.email = data['email_value']
-        session.commit()
+        user = User()
+        osm_user = user.get_by_osm_id(data['user'])
+        user_dto = dict(
+            osm_user_id=data['user'],
+            email=data['email_value']
+            )
+        osm_user.update(user_dto)
     return redirect(
         url_for(
                 'campaign_manager.home_all',
@@ -222,10 +208,9 @@ def get_campaign_insight_function_data(uuid, insight_function_id):
     """Get campaign insight function data.
     """
     campaign_ui = ''
-    campaign = session.query(Campaign).filter(
-        Campaign.uuid == uuid
-        ).first()
-    functions = get_campaign_function(campaign.functions)
+    campaign = Campaign()
+    campaign_obj = campaign.get_by_uuid(uuid)
+    functions = get_campaign_function(campaign_obj.functions)
     additional_data = clean_argument(request.args)
     insight_function = functions[insight_function_id]
     SelectedFunction = getattr(
@@ -233,12 +218,18 @@ def get_campaign_insight_function_data(uuid, insight_function_id):
     additional_data['function_id'] = insight_function_id
     if 'type' in insight_function:
         additional_data['type'] = insight_function['type']
+    selected_function = SelectedFunction(
+        campaign_obj,
+        feature=insight_function['feature'],
+        required_attributes=insight_function['attributes'],
+        additional_data=additional_data
+        )
     # render UI
     context = {
         'selected_function_name': (insight_function['name'] +
                                    insight_function['type']),
         'icon': "list",
-        # 'widget': get_ui_html()  TO BE IMPLEMENTED
+        'widget': selected_function.get_ui_html()
     }
     campaign_ui += render_template(
         'campaign_widget/insight_template.html',
@@ -525,13 +516,8 @@ def get_campaign_function(functions):
 
 def get_campaign_geometry(campaign):
     geomtery_dict = {}
-    campaign_geometry_info = session.query(TaskBoundary).filter(
-        TaskBoundary.campaign_id == campaign.id).first()
-    campaign_geometry = session.query(
-        TaskBoundary.coordinates.ST_AsGeoJSON()
-        ).filter(
-        TaskBoundary.campaign_id == campaign.id
-        ).first()
+    campaign_geometry_info = campaign.get_task_boundary()
+    campaign_geometry = campaign.get_task_boundary_as_geoJSON()
     geomtery_dict['type'] = campaign_geometry_info.type_boundary
     geomtery_dict['features'] = []
     boundary = {}
@@ -555,35 +541,34 @@ def get_campaign(uuid):
     """
     context = {}
     try:
-        campaign = session.query(Campaign).filter(
-            Campaign.uuid == uuid
-            ).first()
-        context['campaign'] = campaign
+        campaign = Campaign()
+        campaign_obj = campaign.get_by_uuid(uuid)
+        context['campaign'] = campaign_obj
         context['oauth_consumer_key'] = OAUTH_CONSUMER_KEY
         context['oauth_secret'] = OAUTH_SECRET
         context['map_provider'] = map_provider()
-        functions = campaign.functions
+        functions = campaign_obj.functions
         context['selected_functions'] = get_campaign_function(functions)
         # load campaign geomerty
-        context['geometry'] = get_campaign_geometry(campaign)
+        context['geometry'] = get_campaign_geometry(campaign_obj)
 
         # Start date
         try:
-            start_date = campaign.start_date
+            start_date = campaign_obj.start_date
             context['start_date'] = start_date
         except TypeError:
             context['start_date'] = '-'
         date = datetime.now().date()
-        if campaign.start_date <= date and date <= campaign.end_date:
+        if campaign_obj.start_date <= date and date <= campaign_obj.end_date:
             context['current_status'] = 'running'
         # End date
         try:
-            end_date = campaign.end_date
+            end_date = campaign_obj.end_date
             context['end_date'] = end_date
         except TypeError:
             context['end_date'] = end_date
         # Participant
-        context['participants'] = len(campaign.users)
+        context['participants'] = len(campaign_obj.users)
         return render_template(
             'campaign_detail.html', **context)
     except Campaign.DoesNotExist:
@@ -660,9 +645,9 @@ def generate_josm():
 @campaign_manager.route('/download_josm/<uuid>/<file_name>')
 def download_josm(uuid, file_name):
     """Download josm file."""
-    campaign = campaign = session.query(Campaign).filter(Campaign.uuid ==
-                                                         uuid).first()
-    campaign_name = campaign.name + '.osm'
+    campaign = Campaign()
+    campaign_obj = campaign.get_by_uuid(uuid)
+    campaign_name = campaign_obj.name + '.osm'
     file_path = os.path.join(config.CACHE_DIR, file_name)
     if not os.path.exists(file_path):
         abort(404)
@@ -726,7 +711,8 @@ def generate_kml():
 @campaign_manager.route('/download_kml/<uuid>/<file_name>')
 def download_kml(uuid, file_name):
     """Download campaign as a kml file"""
-    campaign = session.query(Campaign).filter(Campaign.uuid == uuid).first()
+    campaign = Campaign()
+    campaign_obj = campaign.get_by_uuid(uuid)
 
     file_path = os.path.join(
         config.CACHE_DIR,
@@ -867,23 +853,21 @@ def save_campaign_feature_types(campaign, data):
             feature=feature,
             name=name
             )
-        session.add(featureType)
-        session.commit()  # commit new/modified feature type to the database
+        featureType.create()
         # commit attributes for the feature to the database
         for _tag in type_dict['tags']:
             attribute = Attribute(
                 attribute_name=_tag
                 )
-            session.add(attribute)
-            session.commit()
+            attribute.create()
             featureType.attributes.append(attribute)
         session.commit()
-        campaign.featureTypes.append(featureType)
+        campaign.feature_types.append(featureType)
     session.commit()
 
 
 def delete_campaign_feature_types(campaign):
-    feature_types = campaign.featureTypes
+    feature_types = campaign.feature_types
     for feature_type in feature_types:
         session.delete(feature_type)
     session.commit()
@@ -907,10 +891,9 @@ def save_campaign_geometry(campaign, data):
         status=status,
         type_boundary=taskboundary_type
         )
-    session.add(taskboundary)
-    session.commit()
+    taskboundary.create()
 
-    campaign.taskBoundaries.append(taskboundary)
+    campaign.task_boundaries.append(taskboundary)
     session.commit()
 
     team = data_geometry['features'][0]['properties']['team']
@@ -918,14 +901,13 @@ def save_campaign_geometry(campaign, data):
         name=team,
         boundary_id=taskboundary.id
         )
-    session.add(team_obj)
-    session.commit()
+    team_obj.create()
 
 
 def delete_campaign_taskboundaries(campaign):
-    task_boundaries = campaign.taskBoundaries
+    task_boundaries = campaign.task_boundaries
     for taskboundary in task_boundaries:
-        session.delete(taskboundary.id_team)
+        session.delete(taskboundary.team)
         session.delete(taskboundary)
 
 
@@ -947,8 +929,7 @@ def save_campaign_insight_functions(campaign, data):
             feature=feature,
             type_id=_type.id
             )
-        session.add(selected_function)
-        session.commit()
+        selected_function.create()
         campaign.functions.append(selected_function)
     session.commit()
 
@@ -964,10 +945,9 @@ def save_campaign_managers(campaign, data):
         Creates or updates the campaign object in the database
     """
     # pre-processing managers to obtain campaign managers
+    user = User()
     for manager in data['campaign_managers']:
-        manager = session.query(User).filter(
-            User.osm_user_id == manager
-            ).first()
+        manager = user.get_by_osm_id(manager)
         campaign.users.append(manager)
     session.commit()
 
@@ -978,15 +958,16 @@ def create_campaign():
     from flask import url_for, redirect
     from campaign_manager.forms.campaign import CampaignForm
     # Get all the template feature types for the campaign from the database
-    featureTypes = session.query(FeatureType).filter(
-        FeatureType.is_template == true()
-        ).all()
+    feature_type = FeatureType()
+    featureTypes = feature_type.get_templates()
 
     # Get all the pre-registered Teams from the FieldCampaigner Database
-    teams = session.query(Team).all()
+    team = Team()
+    teams = team.get_all()
 
-    # Get managers/users registered in the
-    managers = session.query(User).all()
+    # Get managers/users registered
+    user = User()
+    managers = user.get_all()
     managers = [x.osm_user_id for x in managers]
 
     # If there is no managers
@@ -1004,9 +985,7 @@ def create_campaign():
 
         if data['uploader'] not in managers:
             abort(403)
-        campaign_creator = session.query(User).filter(
-            User.osm_user_id == data['uploader']
-            ).first()
+        campaign_creator = user.get_by_osm_id(data['uploader'])
         created_campaign = Campaign(
             name=data['name'],
             description=data['description'],
@@ -1018,8 +997,7 @@ def create_campaign():
             version=2,
             map_type=data['map_type']
             )
-        session.add(created_campaign)
-        session.commit()
+        created_campaign.create()
         save_campaign_feature_types(
             created_campaign,
             data
@@ -1069,16 +1047,15 @@ def edit_campaign(uuid):
     """
     context = {}
     try:
-        campaign = session.query(Campaign).filter(Campaign.uuid ==
-                                                  uuid).first()
-        context['campaign'] = campaign
-        # Get managers
-        managers = campaign.users
+        campaign = Campaign()
+        campaign_obj = campaign.get_by_uuid(uuid)
+        context['campaign'] = campaign_obj
+        managers = campaign_obj.users
         managers = [x.osm_user_id for x in managers]
         campaign_types = {}
 
         # Preprocess campaign data
-        for _ in campaign.featureTypes:
+        for _ in campaign_obj.feature_types:
             campaign_types[_.name] = {}
             campaign_types[_.name]["type"] = _.name
             campaign_types[_.name]["feature"] = _.feature
@@ -1087,21 +1064,23 @@ def edit_campaign(uuid):
                 campaign_types[_.name]['tags'][x.attribute_name] = []
         if request.method == 'GET':
             form = CampaignForm()
-            form.name.data = campaign.name
+            form.name.data = campaign_obj.name
             form.campaign_managers.data = managers
-            form.remote_projects.data = campaign.remote_projects
+            form.remote_projects.data = campaign_obj.remote_projects
             form.types.data = campaign_types
-            form.description.data = campaign.description
-            form.geometry.data = json.dumps(get_campaign_geometry(campaign))
-            form.map_type.data = campaign.map_type
+            form.description.data = campaign_obj.description
+            form.geometry.data = json.dumps(
+                get_campaign_geometry(campaign_obj)
+                )
+            form.map_type.data = campaign_obj.map_type
             form.selected_functions.data = json.dumps(
                 get_campaign_function(
-                    campaign.functions
+                    campaign_obj.functions
                     )
                 )
-            form.start_date.data = campaign.start_date
-            if campaign.end_date:
-                form.end_date.data = campaign.end_date
+            form.start_date.data = campaign_obj.start_date
+            if campaign_obj.end_date:
+                form.end_date.data = campaign_obj.end_date
         else:
             form = CampaignForm(request.form)
             if form.validate_on_submit():
@@ -1109,34 +1088,36 @@ def edit_campaign(uuid):
                 data.pop('types_options')
                 data.pop('csrf_token')
                 data.pop('submit')
-                campaign.name = data['name']
-                campaign.description = data['description']
-                campaign.start_date = data['start_date']
-                campaign.end_date = data['end_date']
-                session.commit()
-                delete_campaign_taskboundaries(campaign)
-                delete_campaign_insight_functions(campaign)
-                delete_campaign_feature_types(campaign)
+                campaign_dto = dict(
+                    name=data['name'],
+                    description=data['description'],
+                    start_date=data['start_date'],
+                    end_date=data['end_date']
+                    )
+                campaign_obj.update(campaign_dto)
+                delete_campaign_taskboundaries(campaign_obj)
+                delete_campaign_insight_functions(campaign_obj)
+                delete_campaign_feature_types(campaign_obj)
                 save_campaign_feature_types(
-                    campaign,
+                    campaign_obj,
                     data
                     )
                 save_campaign_geometry(
-                    campaign,
+                    campaign_obj,
                     data
                     )
                 save_campaign_insight_functions(
-                    campaign,
+                    campaign_obj,
                     data
                     )
                 save_campaign_managers(
-                    campaign,
+                    campaign_obj,
                     data
                     )
-                create_thumbnail_image(campaign)
+                create_thumbnail_image(campaign_obj)
                 return redirect(
                     url_for('campaign_manager.get_campaign',
-                            uuid=campaign.uuid)
+                            uuid=campaign_obj.uuid)
                 )
     except Exception as e:
         return Response('Campaign not found')
@@ -1152,8 +1133,8 @@ def edit_campaign(uuid):
     context['maximum_area_size'] = MAX_AREA_SIZE
     context['uuid'] = uuid
     context['types'] = {}
-    context['campaign_creator'] = campaign.creator.osm_user_id
-    context['link_to_omk'] = campaign.link_to_OpenMapKit
+    context['campaign_creator'] = campaign_obj.creator.osm_user_id
+    context['link_to_omk'] = campaign_obj.link_to_OpenMapKit
     try:
         context['types'] = json.dumps(
             get_types()).replace('True', 'true').replace('False', 'false')
@@ -1312,11 +1293,7 @@ def create_thumbnail_image(campaign):
               'auto/{width}x{height}?' \
               'access_token=' + MAPBOX_TOKEN
         geometry = {}
-        campaign_geometry = session.query(
-            TaskBoundary.coordinates.ST_AsGeoJSON()
-            ).filter(
-            TaskBoundary.campaign_id == campaign.id
-            ).first()
+        campaign_geometry = campaign.get_task_boundary_as_geoJSON()
         geom_obj = ast.literal_eval(campaign_geometry[0])
         geometry['geometry'] = geom_obj
         geometry['type'] = "Feature"
@@ -1336,12 +1313,19 @@ def create_thumbnail_image(campaign):
             )).filter(TaskBoundary.campaign_id == campaign.id).first()
         polygon = ast.literal_eval(polygon[0])
         marker_url = '&markers=%s,%s,lightblue' % (
-                polygon['coordinates'][1], polygon['coordinates'][0])
+                polygon['coordinates'][1],
+                polygon['coordinates'][0]
+                )
         url = url + marker_url
     safe_name = hashlib.md5(url.encode('utf-8')).hexdigest() + '.png'
     data_folder = os.path.join(
-        Config.campaigner_data_folder, 'campaign')
-    thumbnail_dir = os.path.join(data_folder, 'thumbnail')
+        Config.campaigner_data_folder,
+        'campaign'
+        )
+    thumbnail_dir = os.path.join(
+        data_folder,
+        'thumbnail'
+        )
 
     if not os.path.exists(thumbnail_dir):
         os.makedirs(thumbnail_dir)

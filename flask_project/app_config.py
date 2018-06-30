@@ -31,7 +31,6 @@ class Config(object):
     # DATABASE URL
     DATABASE_URL = os.environ['DATABASE_URL']
 
-
 class ProductionConfig(Config):
     """Production environment.
     """

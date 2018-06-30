@@ -504,8 +504,8 @@
             {% for campaign in campaigns %}
                 var types = [];
                 var action_button = '';
-                {% if campaign.featureTypes %}
-                    {% for featuretype in campaign.featureTypes %}
+                {% if campaign.feature_types %}
+                    {% for featuretype in campaign.feature_types %}
                         types.push('{{ featuretype.name }}');
                     {% endfor %}
                 {% else %}
@@ -543,7 +543,7 @@
                                                     '</div>'+
                                         '</div>'+ Math.round(progress) + '%';
                 var tags = '';
-                {% for featuretype in campaign.featureTypes %}
+                {% for featuretype in campaign.feature_types %}
                     tags += '<span class="campaign-tags">'+ '{{ featuretype.name }}' +'</span> ';
                 {% endfor %}
 

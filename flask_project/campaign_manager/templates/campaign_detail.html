@@ -25,8 +25,8 @@
     <div class="row">
         <div class="col-lg-7">
             <h3 class="detail-campaign-name">{{ campaign.name }}</h3>
-            {% if campaign.featureTypes %}
-                {% for feature in campaign.featureTypes %}
+            {% if campaign.feature_types %}
+                {% for feature in campaign.feature_types %}
                     <label class="detail-tag"> {{ feature.name }} </label>
                 {% endfor %}
             {% endif %}
@@ -368,8 +368,8 @@
         var featureGroups = {};
 
         var campaign_types = [];
-        {% if campaign.featureTypes %}
-            {% for type in campaign.featureTypes %}
+        {% if campaign.feature_types %}
+            {% for type in campaign.feature_types %}
             campaign_types.push('{{ type.name }}');
             {% endfor %}
         {% endif %}
