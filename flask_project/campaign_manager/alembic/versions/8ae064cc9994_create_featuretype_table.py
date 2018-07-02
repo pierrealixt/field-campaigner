@@ -33,8 +33,8 @@ def upgrade():
             sa.String(50)),
 
         sa.Column('is_template',
-            sa.String(20),
-            nullable=False)
+            sa.BOOLEAN(),
+            default=False)
     )
 
 
