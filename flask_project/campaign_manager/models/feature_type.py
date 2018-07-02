@@ -29,3 +29,14 @@ class FeatureType(Base):
     def __init__(self, **kwargs):
         super(FeatureType, self).__init__(**kwargs)
 
+    def get_templates(self):
+        """ Returns the templates feature types """
+        return session.query(FeatureType).filter(
+            FeatureType.is_template == true()
+            ).all()
+
+    def create(self):
+        """ Creates and saves the current model to DB """
+        session.add(self)
+        session.commit()
+

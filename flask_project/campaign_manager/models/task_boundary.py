@@ -18,3 +18,8 @@ class TaskBoundary(Base):
 
     def __init__(self, **kwargs):
         super(TaskBoundary, self).__init__(**kwargs)
+
+    def create(self):
+        """ Creates and saves the current model to DB """
+        session.add(self)
+        session.commit()

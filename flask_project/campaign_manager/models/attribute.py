@@ -11,3 +11,8 @@ class Attribute(Base):
 
     def __init__(self, **kwargs):
         super(Attribute, self).__init__(**kwargs)
+
+    def create(self):
+        """ Creates and saves the current model to DB """
+        session.add(self)
+        session.commit()
