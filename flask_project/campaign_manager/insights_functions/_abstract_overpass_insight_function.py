@@ -56,9 +56,7 @@ class AbstractOverpassInsightFunction(AbstractInsightsFunction):
         :rtype: dict
         """
         features = self.feature.split('=')
-        coordinates = self.campaign.get_task_boundary_as_geoJSON()
-        coordinates = ast.literal_eval(coordinates[0])
-        coordinates = coordinates['coordinates'][0]
+        coordinates = self.campaign.get_task_boundary_coordinates()
         if len(features) == 0:
             return []
         elif len(features) == 2:

@@ -542,33 +542,6 @@ def get_campaign_geometry(campaign):
     return geomtery_dict
 
 
-def get_selected_functions_in_string(functions, campaign_obj):
-        """ Get selected function in string
-        :return: Get selected function in string
-        :rtype: str
-        """
-        for key, value in functions.items():
-            try:
-                SelectedFunction = getattr(
-                    insights_functions, value['function'])
-                additional_data = {}
-                if 'type' in value:
-                    additional_data['type'] = value['type']
-                selected_function = SelectedFunction(
-                    campaign_obj,
-                    feature=value['feature'],
-                    required_attributes=value['attributes'],
-                    additional_data=additional_data)
-
-                value['type_required'] = \
-                    ('%s' % selected_function.type_required).lower()
-                value['manager_only'] = selected_function.manager_only
-                value['name'] = selected_function.name()
-            except AttributeError:
-                value = None
-        return json.dumps(functions).replace('None', 'null')
-
-
 def get_campaign_feature_type(feature_types):
     type_dict = {}
     i = 1
@@ -598,10 +571,8 @@ def get_campaign(uuid):
         context['map_provider'] = map_provider()
         functions = campaign_obj.functions
         functions = get_campaign_function(functions)
-        context['selected_functions'] = get_selected_functions_in_string(
-            functions,
-            campaign_obj
-            )
+        context['selected_functions'] = \
+            campaign_obj.get_selected_functions_in_string()
         context['campaign_types'] = get_campaign_feature_type(
             campaign_obj.feature_types
             )
@@ -621,7 +592,7 @@ def get_campaign(uuid):
             end_date = campaign_obj.end_date
             context['end_date'] = end_date
         except TypeError:
-            context['end_date'] = end_date
+            context['end_date'] = '-'
         # Participant
         context['participants'] = len(campaign_obj.users)
         return render_template(

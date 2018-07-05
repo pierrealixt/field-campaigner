@@ -350,6 +350,13 @@ class Campaign(Base):
             TaskBoundary.campaign_id == self.id
             ).first()
 
+    def get_task_boundary_coordinates(self):
+        """ Returns the coordinates of the TaskBoundary. """
+        coordinates = self.get_task_boundary_as_geoJSON()
+        coordinates = ast.literal_eval(coordinates[0])
+        coordinates = coordinates['coordinates'][0]
+        return coordinates
+
     def get_participant_count(uuid):
         """ Returns the participant count for the campaign """
         participant_count = 0
@@ -377,6 +384,34 @@ class Campaign(Base):
             self.remote_projects = campaign_dto['remote_projects']
         self.create_on = datetime.now()
         session.commit()
+
+    def get_selected_functions_in_string(self, functions):
+        """ Get selected function in string.
+        :param functions: Serialized campaign functions and attributes.
+        :type functions: dict
+        :return: Get selected function in string
+        :rtype: str
+        """
+        for key, value in functions.items():
+            try:
+                SelectedFunction = getattr(
+                    insights_functions, value['function'])
+                additional_data = {}
+                if 'type' in value:
+                    additional_data['type'] = value['type']
+                selected_function = SelectedFunction(
+                    self,
+                    feature=value['feature'],
+                    required_attributes=value['attributes'],
+                    additional_data=additional_data)
+
+                value['type_required'] = \
+                    ('%s' % selected_function.type_required).lower()
+                value['manager_only'] = selected_function.manager_only
+                value['name'] = selected_function.name()
+            except AttributeError:
+                value = None
+        return json.dumps(functions).replace('None', 'null')
 
 
 class Chat(Base):
