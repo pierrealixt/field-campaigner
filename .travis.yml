@@ -7,8 +7,8 @@ cache:
   directories: 
   timeout: 1000
 compiler: clang
-python:
-  - '3.6'
+python: 3.6
+
 addons:
   postgresql: '9.6'
   apt:
@@ -23,14 +23,15 @@ env:
     - APP_SETTINGS=app_config.DevelopmentConfig
     - DATABASE_URL=postgresql://test_user:test_password@localhost/testing_db
     - TESTDATABASE_URL=postgresql://test_user:test_password@localhost/testing_db
+    - LECHAT=bonjour
 
-matrix:
-  fast_finish: true
-  include:
-    - python: '3.6'
-  env: TRAVIS_CONFIG=PYTHON3
-  exclude:
-    - python: '3.6'
+# matrix:
+#   fast_finish: true
+#   include:
+#     - python: '3.6'
+#   env: TRAVIS_CONFIG=PYTHON3
+#   exclude:
+#     - python: '3.6'
 
 git:
   depth: 30
@@ -59,10 +60,12 @@ after_script:
 deploy:
   provider: elasticbeanstalk
   access_key_id: UQ/zDcsyvrtEyqXi0N6ATHBkQJ7Y9/kpPkxWxFoqyIq0JzYVd+4+t8mwH8tdF9UH4YPLi7NasSLEwDGgv143+nJCUuagUGnHUJdV4c/mL5Y9g9r++kS2rVFF8TVkONeAwT120ySQGQgJnm90LkiAb+1RifDbvwvjJ55Gxrxs2v9zAzMg4dKgx4yj1Nrn85C5Q0PpjPE7L/fPLpQQdOCe6kAI0fDRSz4iPmEsdN3v7OT6UgOVOH5fQ5CskmBxYVGi2F6bDxx1rZ8oMd1SlqCzHKPedO5VQXM3RP7tyHUoWd0tp8WfIXl6xaLw2VI2mRGPc1O+4hy0fN1AWVbndmuK6Tmj7Rrso4ZSwb8k8e9JVKJGOCjOUBK/S8gdXowLC9a15itZv1b5ryPcmbZjqm6n/xIOhttXNiFgbRDmQjI1tZgCLagnEpkut2msDNfY1KrVZRON9B/rLNwQp549IGJmauYs5VD/K6c9je6VzACsD56egzUxUysXr5B8iZOGWHy/wKOLKSd5kQ0b1qf5K6yEKNiNGf+NYqIj6berzghcPLN5DJHuYE1cn4XRYpa4haNsa9+H+heXY5Ju02Voh5a+EN8Lvz+d/0lMFmIZRKtEKoP1JAwzzDlmChHTDGMqFt2LtkVORPfwBxPuJI8eX8ORTspDcPs8yuEWezgRREoMQBE=
-  secret_access_key: THU/sa2rNPH2AxhKijVWPfqTHeHOpi93QQ5czE7mxy3hfs1zQfJrrWswH4ADcyuyYwlunN3mcVMSzI7/bz+3pBmyquBnkQbtNJuRMaSkYB3cNgRLgQdgpM34dVrUgauCPxHyxRecL8onvMIL8fRCe/lQo+r3CG3KXxsp+LI/T7Fkp0MSUaeo2/5ymhA1nGoDfTcPuybTGFN4Jg5A4r4bN6qN1Vccg2bXucisIlo7OZzpLjLYuXK1InSu4BlIC2Ayye31HOjrzfprAndPnGWoHh3kP7261AFW2OEhElwmhl2J3fc3+nr6bXjf64aEK00zxDkYhKyqti/IRDJ6R/d2r0zh7557mWBU0etUXZ3r+JYNLiMcmjqp6Rw+TaY5cnJHJXl15az5Sf5dfdRhdJsAnXkYF/0WF4Omm234Npca4/p2tgBjV66iasKcgyypf8cl5B40wv7oas7ffefxz8a/orhm8W+Ae3CO7W4jgBddGi/nSd5c7pMhWeYAdzAYC5M42UN+3Nub1X/Q1IarXrsM0AJwaFOfGhSq3V4G4uROV81be0izInm4tr7r480YqBGSEE+fqYmddJ0h1fCtKPvAXqq6nTu86U3Mz5kDYvXzdqteYlcIkryV+2wiHQ369EcCkIutGrEa88I4Cgg1KlyU8Iaz46zI70yif5df3eqwheE=
-  region: us-west-2
-  app: field-campaigner-eb
-  env: field-campaigner-eb-dev # staging
+  secret_access_key: 
+    secure: THU/sa2rNPH2AxhKijVWPfqTHeHOpi93QQ5czE7mxy3hfs1zQfJrrWswH4ADcyuyYwlunN3mcVMSzI7/bz+3pBmyquBnkQbtNJuRMaSkYB3cNgRLgQdgpM34dVrUgauCPxHyxRecL8onvMIL8fRCe/lQo+r3CG3KXxsp+LI/T7Fkp0MSUaeo2/5ymhA1nGoDfTcPuybTGFN4Jg5A4r4bN6qN1Vccg2bXucisIlo7OZzpLjLYuXK1InSu4BlIC2Ayye31HOjrzfprAndPnGWoHh3kP7261AFW2OEhElwmhl2J3fc3+nr6bXjf64aEK00zxDkYhKyqti/IRDJ6R/d2r0zh7557mWBU0etUXZ3r+JYNLiMcmjqp6Rw+TaY5cnJHJXl15az5Sf5dfdRhdJsAnXkYF/0WF4Omm234Npca4/p2tgBjV66iasKcgyypf8cl5B40wv7oas7ffefxz8a/orhm8W+Ae3CO7W4jgBddGi/nSd5c7pMhWeYAdzAYC5M42UN+3Nub1X/Q1IarXrsM0AJwaFOfGhSq3V4G4uROV81be0izInm4tr7r480YqBGSEE+fqYmddJ0h1fCtKPvAXqq6nTu86U3Mz5kDYvXzdqteYlcIkryV+2wiHQ369EcCkIutGrEa88I4Cgg1KlyU8Iaz46zI70yif5df3eqwheE=
+  region: "us-west-2"
+  app: "field-campaigner-eb"
+  env: "field-campaigner-eb-dev" # staging
+  bucket_name: "elasticbeanstalk-us-west-2-142767531394"
 
 email:
   - pierrealix@kartoza.com
