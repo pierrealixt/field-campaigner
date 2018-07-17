@@ -85,7 +85,7 @@ deploy:
     region: "us-west-2"
     app: "field-campaigner-eb"
     env: "field-campaigner-eb-dev"
-    bucket: "elasticbeanstalk-us-west-2-142767531394"
+    bucket_name: arn:aws:s3:::elasticbeanstalk-us-west-2-142767531394
     on:
       branch: aws-eb
 
@@ -98,7 +98,7 @@ deploy:
     region: "us-west-2"
     app: "field-campaigner-eb"
     env: "staging"
-    bucket: "elasticbeanstalk-us-west-2-142767531394"
+    bucket_name: arn:aws:s3:::elasticbeanstalk-us-west-2-142767531394
     on:
       branch: develop
 
