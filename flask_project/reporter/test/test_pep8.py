@@ -61,5 +61,6 @@ class TestPep8(unittest.TestCase):
             'lines from PEP8.)' % (default_number_lines, lines))
         self.assertEquals(lines, default_number_lines, message)
 
+
 if __name__ == '__main__':
     unittest.main()
