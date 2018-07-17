@@ -30,15 +30,14 @@ from geoalchemy2 import Geometry
 from app_config import Config
 
 
-# if 'RDS_DB_NAME' in os.environ:
-#     db_location = 'postgres://{}:{}@{}/{}'.format(
-#         os.environ['RDS_USERNAME'],
-#         os.environ['RDS_PASSWORD'],
-#         os.environ['RDS_HOSTNAME'],
-#         os.environ['RDS_DB_NAME'])
-# else:
-
-db_location = os.environ['DATABASE_URL']
+if 'RDS_DB_NAME' in os.environ:
+    db_location = 'postgres://{}:{}@{}/{}'.format(
+        os.environ['RDS_USERNAME'],
+        os.environ['RDS_PASSWORD'],
+        os.environ['RDS_HOSTNAME'],
+        os.environ['RDS_DB_NAME'])
+else:
+    db_location = os.environ['DATABASE_URL']
 
 engine = create_engine(db_location, echo=True)
 
