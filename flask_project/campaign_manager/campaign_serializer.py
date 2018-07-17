@@ -81,12 +81,10 @@ def get_campaign_functions(functions):
         function_dict[key] = {}
         if(function.name == "FeatureAttributeCompleteness"):
             function_name = (
-                "Feature completeness for " +
-                function.types.name)
+                "Feature completeness for " + function.types.name)
         elif(function.name == "CountFeature"):
             function_name = (
-                "No. of feature in group for " +
-                function.types.name)
+                "No. of feature in group for " + function.types.name)
         elif(function.name == "MapperEngagement"):
             function_name = "Length of mapper engagement"
         function_dict[key]['name'] = function_name
