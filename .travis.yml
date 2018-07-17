@@ -86,6 +86,9 @@ deploy:
   app: "field-campaigner-eb"
   env: "field-campaigner-eb-dev" # staging
   bucket_name: "elasticbeanstalk-us-west-2-142767531394"
+  on:
+    repo: pierrealix/field-campaigner
+    branch: aws-eb
 
 after_deploy:
   - echo "done deploying"
