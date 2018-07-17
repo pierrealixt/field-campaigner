@@ -37,15 +37,9 @@ matrix:
   include:
     - python: '3.6'
       env: TRAVIS_CONFIG=PYTHON3
-    - python: '3.5'
-      env: TRAVIS_CONFIG=PYTHON3
-    - python: '3.4'
-      env: TRAVIS_CONFIG=PYTHON3
 
   exclude:
     - python: '3.6'
-    - python: '3.5'
-    - python: '3.4'
 
 git:
   depth: 30
