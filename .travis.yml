@@ -52,6 +52,7 @@ git:
 
 before_install:
 
+# can have a shell script here
 install:
   - pip install coveralls
   - pip install -r deployment/docker/requirements.txt
@@ -78,3 +79,6 @@ email:
   - dimas@kartoza.com
   - irwan@kartoza.com
   - anita@kartoza.com
+
+after_deploy:
+  - echo "done deploying"
