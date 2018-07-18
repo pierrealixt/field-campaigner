@@ -2,13 +2,13 @@ import os
 
 # import SECRET_KEY into current namespace
 # noinspection PyUnresolvedReferences
-try:
-    from secret import SECRET_KEY as THE_SECRET_KEY  # noqa
-    from secret import OAUTH_CONSUMER_KEY, OAUTH_SECRET
-except ImportError:
-    THE_SECRET_KEY = os.environ['SECRET_KEY']
-    OAUTH_CONSUMER_KEY = ''
-    OAUTH_SECRET = ''
+# try:
+#     from secret import SECRET_KEY as THE_SECRET_KEY  # noqa
+#     from secret import OAUTH_CONSUMER_KEY, OAUTH_SECRET
+# except ImportError:
+THE_SECRET_KEY = os.environ['SECRET_KEY']
+OAUTH_CONSUMER_KEY = os.environ['OAUTH_CONSUMER_KEY']
+OAUTH_SECRET = os.environ['OAUTH_SECRET']
 try:
     DATA_FOLDER = os.environ['DATA_FOLDER']
 except KeyError:
