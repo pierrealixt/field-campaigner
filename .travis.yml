@@ -103,7 +103,7 @@ deploy:
       branch: develop
 
 after_deploy:
-  - echo "done deploying"
+  - echo "done deploying."
 
 after_script:
   - coveralls
