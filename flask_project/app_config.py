@@ -2,18 +2,27 @@ import os
 
 # import SECRET_KEY into current namespace
 # noinspection PyUnresolvedReferences
-# try:
-#     from secret import SECRET_KEY as THE_SECRET_KEY  # noqa
-#     from secret import OAUTH_CONSUMER_KEY, OAUTH_SECRET
-# except ImportError:
+
 try:
     THE_SECRET_KEY = os.environ['SECRET_KEY']
-    OAUTH_CONSUMER_KEY = os.environ['OAUTH_CONSUMER_KEY']
-    OAUTH_SECRET = os.environ['OAUTH_SECRET']
 except KeyError:
     THE_SECRET_KEY = 'THE_SECRET_KEY'
+
+try:
+    OAUTH_CONSUMER_KEY = os.environ['OAUTH_CONSUMER_KEY']
+except KeyError:
     OAUTH_CONSUMER_KEY = 'OAUTH_CONSUMER_KEY'
+
+try:
+    OAUTH_SECRET = os.environ['OAUTH_SECRET']
+except KeyError:
     OAUTH_SECRET = 'OAUTH_SECRET'
+
+try:
+    SENTRY_DSN = os.environ['SENTRY_DSN']
+except KeyError:
+    SENTRY_DSN = 'SENTRY_DSN'
+
 
 try:
     DATA_FOLDER = os.environ['DATA_FOLDER']
@@ -30,6 +39,7 @@ class Config(object):
     SECRET_KEY = THE_SECRET_KEY
     OAUTH_CONSUMER_KEY = OAUTH_CONSUMER_KEY
     OAUTH_SECRET = OAUTH_SECRET
+    SENTRY_DSN = SENTRY_DSN
     MAX_AREA_SIZE = 320000000
 
     # OSMCHA ATTRIBUTES
