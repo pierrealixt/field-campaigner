@@ -84,7 +84,6 @@ deploy:
     app: "field-campaigner-eb"
     env: "field-campaigner-eb-dev"
     bucket_name: fieldcampaigner-eb-deployments
-    zip_file: build.zip
     on:
       branch: aws-eb
 
@@ -96,7 +95,6 @@ deploy:
     app: "field-campaigner-eb"
     env: "staging"
     bucket_name: fieldcampaigner-eb-deployments
-    zip_file: build.zip
     on:
       branch: develop
 
