@@ -7,21 +7,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-if 'RDS_DB_NAME' in os.environ:
-    db_location = 'postgres://{}:{}@{}/{}'.format(
-        os.environ['RDS_USERNAME'],
-        os.environ['RDS_PASSWORD'],
-        os.environ['RDS_HOSTNAME'],
-        os.environ['RDS_DB_NAME'])
-else:
-    db_location = os.environ['DATABASE_URL']
-
-engine = create_engine(db_location, echo=True)
-Base = declarative_base()
-Session = sessionmaker(bind=engine)
-Session.configure(bind=engine)
-session = Session()
+from campaign_manager.sqlalchemy_session import engine, session, Base
 
 session.execute('drop extension if exists postgis CASCADE;')
 session.commit()
