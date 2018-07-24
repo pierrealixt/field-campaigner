@@ -13,6 +13,7 @@ from sqlalchemy.ext.compiler import compiles
 from campaign_manager.models.models import *
 from campaign_manager.sqlalchemy_session import engine, session, Base
 
+
 @compiles(DropTable, "postgresql")
 def _compile_drop_table(element, compiler, **kwargs):
     return compiler.visit_drop_table(element) + " CASCADE"
