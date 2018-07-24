@@ -1,1 +1,1 @@
-from app_sockets import osm_app as application
+from app import osm_app as application
