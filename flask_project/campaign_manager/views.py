@@ -223,8 +223,8 @@ def get_campaign_insight_function_data(uuid, insight_function_id):
         additional_data=additional_data)
     # render UI
     context = {
-        'selected_function_name': (insight_function['name'] +
-                                   insight_function['type']),
+        'selected_function_name': (
+            insight_function['name'] + insight_function['type']),
         'icon': "list",
         'widget': selected_function.get_ui_html()
     }
@@ -634,8 +634,8 @@ def generate_kml():
     kml = Kml(name=campaign_name)
 
     file_name = hashlib.md5(
-        uuid.encode('utf-8') +
-        '{:%m-%d-%Y}'.format(datetime.today()).encode('utf-8')
+        uuid.encode('utf-8') + '{:%m-%d-%Y}'.format(
+            datetime.today()).encode('utf-8')
     ).hexdigest() + '.kml'
 
     file_path = os.path.join(

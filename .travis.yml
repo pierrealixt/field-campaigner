@@ -29,8 +29,11 @@ env:
     - ON_TRAVIS=true
     - SECRET_KEY='tT\xd7\xb06\xf7\x9b\xff\x0fZL\xca\xca\x11\xefM\xacr\xfb\xdf\xca\x9b'
     - APP_SETTINGS=app_config.TestingConfig
-    - DATABASE_URL=postgresql://test_user:test_password@localhost/testing_db
+    # - DATABASE_URL=postgresql://test_user:test_password@localhost/testing_db
     - TESTDATABASE_URL=postgresql://test_user:test_password@localhost/testing_db
+
+email:
+  - pierrealix@kartoza.com
 
 matrix:
   fast_finish: true
@@ -54,8 +57,7 @@ before_install:
 
 install:
   - pip install coveralls
-  - pip install -r deployment/docker/requirements.txt
-  - pip install -r deployment/docker/requirements-dev.txt
+  - pip install -r flask_project/requirements.txt
 
 sudo: true
 
@@ -68,13 +70,36 @@ before_script:
   - psql -U postgres -c "create extension postgis" -d testing_db
 
 script:
-  - cd deployment && make pep8
-  - nosetests ../flask_project
+  - cd flask_project && make pep8
+  - nosetests
+  - echo "is echo working?"
+
+deploy:
+  - provider: elasticbeanstalk
+    skip_cleanup: true
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: "us-west-2"
+    app: "field-campaigner-eb"
+    env: "field-campaigner-eb-dev"
+    bucket_name: fieldcampaigner-eb-deployments
+    on:
+      branch: aws-eb
+
+  - provider: elasticbeanstalk
+    skip_cleanup: true
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: "us-west-2"
+    app: "field-campaigner-eb"
+    env: "staging"
+    bucket_name: fieldcampaigner-eb-deployments
+    on:
+      branch: version-2
+
+after_deploy:
+  - echo "done deploying."
 
 after_script:
   - coveralls
-
-email:
-  - dimas@kartoza.com
-  - irwan@kartoza.com
-  - anita@kartoza.com
+  - echo "build done."
