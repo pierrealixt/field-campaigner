@@ -4,24 +4,13 @@ import os
 # noinspection PyUnresolvedReferences
 
 try:
+    from secret import SECRET_KEY as THE_SECRET_KEY  # noqa
+    from secret import OAUTH_CONSUMER_KEY, OAUTH_SECRET, SENTRY_DSN
+except ImportError:
     THE_SECRET_KEY = os.environ['SECRET_KEY']
-except KeyError:
-    THE_SECRET_KEY = 'THE_SECRET_KEY'
-
-try:
-    OAUTH_CONSUMER_KEY = os.environ['OAUTH_CONSUMER_KEY']
-except KeyError:
-    OAUTH_CONSUMER_KEY = 'OAUTH_CONSUMER_KEY'
-
-try:
-    OAUTH_SECRET = os.environ['OAUTH_SECRET']
-except KeyError:
-    OAUTH_SECRET = 'OAUTH_SECRET'
-
-try:
-    SENTRY_DSN = os.environ['SENTRY_DSN']
-except KeyError:
-    SENTRY_DSN = 'SENTRY_DSN'
+    OAUTH_CONSUMER_KEY = ''
+    OAUTH_SECRET = ''
+    SENTRY_DSN = ''
 
 
 try:
@@ -33,15 +22,15 @@ except KeyError:
 class Config(object):
     """Configuration environment for application.
     """
-    DEBUG = False
-    TESTING = False
+    # DEBUG = False
+    # TESTING = False
     CSRF_ENABLED = True
     SECRET_KEY = THE_SECRET_KEY
     OAUTH_CONSUMER_KEY = OAUTH_CONSUMER_KEY
     OAUTH_SECRET = OAUTH_SECRET
     SENTRY_DSN = SENTRY_DSN
     MAX_AREA_SIZE = 320000000
-    DB_LOCATION = os.environ['DATABASE_URL']
+    
 
     # OSMCHA ATTRIBUTES
     _OSMCHA_DOMAIN = 'https://osmcha.mapbox.com/'
@@ -56,6 +45,8 @@ class ProductionConfig(Config):
     """Production environment.
     """
     DEBUG = False
+    if 'DATABASE_URL' in os.environ:
+        DB_LOCATION = os.environ['DATABASE_URL']
 
 
 class StagingConfig(Config):
@@ -63,32 +54,40 @@ class StagingConfig(Config):
     """
     DEVELOPMENT = True
     DEBUG = True
+    if 'DATABASE_URL' in os.environ:
+        DB_LOCATION = os.environ['DATABASE_URL']
 
 class AWSStagingConfig(Config):
     DEBUG = False
 
-    DB_LOCATION = 'postgres://{}:{}@{}/{}'.format(
-        os.environ['RDS_USERNAME'],
-        os.environ['RDS_PASSWORD'],
-        os.environ['RDS_HOSTNAME'],
-        os.environ['RDS_DB_NAME'])
+    if 'RDS_USERNAME' in os.environ:
+        DB_LOCATION = 'postgres://{}:{}@{}/{}'.format(
+            os.environ['RDS_USERNAME'],
+            os.environ['RDS_PASSWORD'],
+            os.environ['RDS_HOSTNAME'],
+            os.environ['RDS_DB_NAME'])
 
 class AWSDevelopmentConfig(Config):
     """ AWS Development environment.
     """
     DEVELOPMENT = True
     DEBUG = True
-    DB_LOCATION = 'postgres://{}:{}@{}/{}'.format(
-        os.environ['RDS_USERNAME'],
-        os.environ['RDS_PASSWORD'],
-        os.environ['RDS_HOSTNAME'],
-        os.environ['RDS_DB_NAME'])
+
+    if 'RDS_USERNAME' in os.environ:
+        DB_LOCATION = 'postgres://{}:{}@{}/{}'.format(
+            os.environ['RDS_USERNAME'],
+            os.environ['RDS_PASSWORD'],
+            os.environ['RDS_HOSTNAME'],
+            os.environ['RDS_DB_NAME'])
 
 class DevelopmentConfig(Config):
     """Development environment.
     """
     DEVELOPMENT = True
+    TESTING = False
     DEBUG = True
+    if 'DATABASE_URL' in os.environ:
+        DB_LOCATION = os.environ['DATABASE_URL']
 
 
 class TestingConfig(Config):
@@ -96,7 +95,10 @@ class TestingConfig(Config):
     """
     DEBUG = True
     TESTING = True
+    DEVELOPMENT = False
     WTF_CSRF_ENABLED = True
     PRESERVE_CONTEXT_ON_EXCEPTION = False
-    DB_LOCATION = os.environ['TESTDATABASE_URL']
+    if 'TESTDATABASE_URL' in os.environ:
+        DB_LOCATION = os.environ['TESTDATABASE_URL']
+        
     DRIVER_PATH = os.path.abspath('./campaign_manager/test/chromedriver')
