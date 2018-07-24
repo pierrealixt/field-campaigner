@@ -8,8 +8,17 @@ try:
     from secret import OAUTH_CONSUMER_KEY, OAUTH_SECRET, SENTRY_DSN
 except ImportError:
     THE_SECRET_KEY = os.environ['SECRET_KEY']
-    OAUTH_CONSUMER_KEY = os.environ['OAUTH_CONSUMER_KEY']
-    OAUTH_SECRET = os.environ['OAUTH_SECRET']
+
+    if 'OAUTH_CONSUMER_KEY' in os.environ:
+        OAUTH_CONSUMER_KEY = os.environ['OAUTH_CONSUMER_KEY']
+    else:
+        OAUTH_CONSUMER_KEY = 'SET_OAUTH_CONSUMER_KEY'
+
+    if 'OAUTH_SECRET' in os.environ:
+        OAUTH_SECRET = os.environ['OAUTH_SECRET']
+    else:
+        OAUTH_SECRET = 'SET_OAUTH_SECRET'
+
     SENTRY_DSN = os.environ['SENTRY_DSN']
 
 
