@@ -13,8 +13,8 @@ compiler: clang
 
 python:
   - '3.6'
-  - '3.5'
-  - '3.4'
+  # - '3.5'
+  # - '3.4'
 
 addons:
   postgresql: "9.6"
@@ -40,15 +40,15 @@ matrix:
   include:
     - python: '3.6'
       env: TRAVIS_CONFIG=PYTHON3
-    - python: '3.5'
-      env: TRAVIS_CONFIG=PYTHON3
-    - python: '3.4'
-      env: TRAVIS_CONFIG=PYTHON3
+    # - python: '3.5'
+    #   env: TRAVIS_CONFIG=PYTHON3
+    # - python: '3.4'
+    #   env: TRAVIS_CONFIG=PYTHON3
 
   exclude:
     - python: '3.6'
-    - python: '3.5'
-    - python: '3.4'
+    # - python: '3.5'
+    # - python: '3.4'
 
 git:
   depth: 30
@@ -72,7 +72,6 @@ before_script:
 script:
   - cd flask_project && make pep8
   - nosetests
-  - echo "is echo working?"
 
 deploy:
   - provider: elasticbeanstalk
@@ -81,7 +80,7 @@ deploy:
     secret_access_key: $AWS_SECRET_ACCESS_KEY
     region: "us-west-2"
     app: "field-campaigner-eb"
-    env: "field-campaigner-eb-dev"
+    env: "development"
     bucket_name: fieldcampaigner-eb-deployments
     on:
       branch: aws-eb
@@ -97,9 +96,6 @@ deploy:
     on:
       branch: version-2
 
-after_deploy:
-  - echo "done deploying."
 
 after_script:
   - coveralls
-  - echo "build done."
