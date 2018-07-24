@@ -7,14 +7,19 @@ from flask_profiler import Profiler
 from app_config import Config
 
 from campaign_manager.context_processor import inject_oauth_param
+# define a Blueprint
 from campaign_manager import campaign_manager
+
 from campaign_manager.views import not_found_page, forbidden_page
 from campaign_manager.context_processor import inject_oauth_param
 from app_config import Config
-from app_sockets import osm_app
 
+# define the Flask app
+# from app_sockets import osm_app
+osm_app = Flask(__name__, static_folder='./campaign_manager/static')
+# register blueprint to app
 osm_app.register_blueprint(campaign_manager)
-
+# in aws eb, it fails because it is already registered somewhere
 
 try:
     osm_app.config.from_object(os.environ['APP_SETTINGS'])
