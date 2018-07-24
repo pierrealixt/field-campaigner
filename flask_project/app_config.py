@@ -64,6 +64,25 @@ class StagingConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
 
+class AWSStagingConfig(Config):
+    DEBUG = False
+
+    DB_LOCATION = 'postgres://{}:{}@{}/{}'.format(
+        os.environ['RDS_USERNAME'],
+        os.environ['RDS_PASSWORD'],
+        os.environ['RDS_HOSTNAME'],
+        os.environ['RDS_DB_NAME'])
+
+class AWSDevelopmentConfig(Config):
+    """ AWS Development environment.
+    """
+    DEVELOPMENT = True
+    DEBUG = True
+    DB_LOCATION = 'postgres://{}:{}@{}/{}'.format(
+        os.environ['RDS_USERNAME'],
+        os.environ['RDS_PASSWORD'],
+        os.environ['RDS_HOSTNAME'],
+        os.environ['RDS_DB_NAME'])
 
 class DevelopmentConfig(Config):
     """Development environment.
