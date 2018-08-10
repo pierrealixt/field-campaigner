@@ -50,6 +50,8 @@ class S3Data(object):
         """
         if self.is_json(key):
             return json.loads(raw_content)
+        # elif self.is_yaml(key) or self.is_text(key):
+            # return yaml.load(raw_content)
         else:
             return yaml.load(raw_content)
 
@@ -67,6 +69,34 @@ class S3Data(object):
             return True
         return False
 
+    def is_yaml(self, key):
+        """
+        Check if the key has a yaml extension.
+
+        :param key: path + filename
+        :type key: string
+
+        :returns: True or False
+        :rtype: boolean
+        """
+        if key.split('.')[-1] in ['yaml']:
+            return True
+        return False
+
+
+    def is_text(self, key):
+        """
+        Check if the key has a txt extension.
+
+        :param key: path + filename
+        :type key: string
+
+        :returns: True or False
+        :rtype: boolean
+        """
+        if key.split('.')[-1] in ['txt']:
+            return True
+        return False
     def list(self, prefix):
         """
         List S3 objects in bucket starting with prefix.
