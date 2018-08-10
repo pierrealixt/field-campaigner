@@ -20,10 +20,3 @@ def lambda_handler(event, context):
 
     for function_name in LAMBDA:
         invoke(function_name, payload)
-
-def main():
-    event = {'campaign_uuid': 'cabbf57b1ac3410cafdd6d64abb1c893'}
-    lambda_handler(event, {})
-
-if __name__ == "__main__":
-    main()

@@ -1,10 +1,15 @@
 import unittest
+from lambda_function import lambda_handler
 from utilities import (
   get_unique_features,
   split_feature_key_values
 )
 
-class RandomTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
+
+    def test_run(self):
+      event = {'campaign_uuid': 'cabbf57b1ac3410cafdd6d64abb1c893'}
+      lambda_handler(event, {})
 
     def test_get_unique_features(self):
         selected_functions = {

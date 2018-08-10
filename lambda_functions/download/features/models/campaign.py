@@ -19,7 +19,6 @@ class Campaign(JsonModel):
             self.uuid = uuid
             self.json_path = Campaign.get_json_file(uuid)
             self.geojson_path = Campaign.get_geojson_file(uuid)
-            self.edited_at = S3Data().get_last_modified_date(self.json_path)
             self.parse_json_file()
 
 

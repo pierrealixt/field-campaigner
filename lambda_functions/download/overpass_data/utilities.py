@@ -1,16 +1,91 @@
 import json
+import requests
+import os
+import hashlib
+import boto3
+import json
+from aws import S3Data
 
+def build_payload(uuid, filename, date):
+    return json.dumps({
+        'campaign_uuid': uuid,
+        'filename': filename,
+        'date': date
+    })
+
+def download_attic_data(payload):
+    aws_lambda = boto3.client('lambda')
+    aws_lambda.invoke(
+        FunctionName='download_attic_data',
+        InvocationType='Event',
+        Payload=payload)    
+
+def format_query(parameters):
+    if parameters['value']:
+        query = template_query_with_value()
+    else:
+        query = template_query()
+
+    return query.format(**parameters)
+
+def format_feature_values(feature_values):
+    return '|'.join(feature_values)
+
+def build_query(polygon, feature):
+    parameters = {
+        'polygon': split_polygon(polygon),
+        'print_mode': 'meta',
+        'key': feature['key'],
+        'value': format_feature_values(feature['values'])
+    }
+    return format_query(parameters)
+
+def template_query():
+    return ('[out:json];('
+        'way["{key}"]'
+        '(poly:"{polygon}");'
+        'node["{key}"]'
+        '(poly:"{polygon}");'
+        'relation["{key}"]'
+        '(poly:"{polygon}");'
+        ');'
+        '(._;>;);'
+        'out {print_mode};')
+
+def template_query_with_value():
+    return ('[out:json];('
+        'way["{key}"~"{value}"]'
+        '(poly:"{polygon}");'
+        'node["{key}"~"{value}"]'
+        '(poly:"{polygon}");'
+        'relation["{key}"~"{value}"]'
+        '(poly:"{polygon}");'
+        ');'
+        '(._;>;);'
+        'out {print_mode};')
+
+def post_request(query):
+    data = requests.post(
+        url='http://exports-prod.hotosm.org:6080/api/interpreter',
+        data={'data': query},
+        headers={'User-Agent': 'HotOSM'})
+
+    return data.text.encode('utf-8')
+
+def save_to_s3(filename, data):
+    S3Data().create('data/overpass/{}.json'.format(filename), data)
+
+def date_to_dict(start_date, end_date):
+    return {
+        'from': start_date,
+        'to': end_date
+    }
 
 def feature_to_filename(feature):
     return '{key}{op}{values}'.format(
         key=feature['key'],
         op='=' if len(feature['values']) > 0 else '',
         values=','.join(feature['values']))
-    # if len(feature['values']) == 0:
-    #     return '{key}'.format(key=feature['key'])
-    # return '{key}={values}'.format(
-    #     key=feature['key'],
-    #     values=','.join(feature['values']))
 
 def split_polygon(polygon):
     """Split polygon array to string.
@@ -51,7 +126,6 @@ def simplify_polygon(polygon, tolerance):
     )
     return simplified_polygons
 
-
 def parse_json_string(json_string):
     """Parse json string to object, if it fails then return none
 
@@ -71,4 +145,3 @@ def parse_json_string(json_string):
     except (ValueError, TypeError):
         pass
     return json_object
-

@@ -18,12 +18,10 @@ def download_overpass_data(uuid, key, values):
             'values': values
         }
     })
-    print('download_overpass_data')
-    print(payload)
-    # aws_lambda.invoke(
-    #     FunctionName='download_overpass_data',
-    #     InvocationType='Event',
-    #     Payload=payload)        
+    aws_lambda.invoke(
+        FunctionName='download_overpass_data',
+        InvocationType='Event',
+        Payload=payload)
 
 
 def lambda_handler(event, context):
@@ -37,10 +35,3 @@ def lambda_handler(event, context):
         key, values = split_feature_key_values(feature)
         download_overpass_data(uuid, key, values)
 
-
-def main():
-    event = {'campaign_uuid': 'cabbf57b1ac3410cafdd6d64abb1c893'}
-    lambda_handler(event, {})
-
-if __name__ == "__main__":
-    main()
