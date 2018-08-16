@@ -89,15 +89,15 @@ class S3Data(object):
         :rtype: list
         """
         prefix = '{}/'.format(prefix)
-
         objects = []
         try:
             for obj in self.s3.list_objects(
                 Bucket=self.bucket,
                 Prefix=prefix)['Contents']:
                 if obj['Key'] != prefix:
-                    objects.append(obj['Key'].replace(prefix, ''))
-            return objects
+                    key = obj['Key'].replace(prefix, '')
+                    objects.append(key.split('/')[0])
+            return list(set(objects))
         except KeyError:
             return []
 
