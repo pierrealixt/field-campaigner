@@ -10,8 +10,8 @@ application = flask.Flask(__name__)
 application.config.from_object('default_config')
 
 @application.route('/download-feature', methods=['POST'])
-    def download_feature():
-        print(request.json)
+def download_feature():
+    print(request.json)
 
 
 if __name__ == '__main__':
