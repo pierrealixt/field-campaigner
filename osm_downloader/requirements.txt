@@ -1,0 +1,4 @@
+Flask==1.0.2
+Werkzeug==0.14.1
+boto3==1.7.70
+itsdangerous==0.24
