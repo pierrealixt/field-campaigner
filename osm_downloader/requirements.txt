@@ -2,3 +2,6 @@ Flask==1.0.2
 Werkzeug==0.14.1
 boto3==1.7.70
 itsdangerous==0.24
+Shapely==1.6.4.post2
+PyYAML==3.13
+requests==2.19.1
