@@ -1,6 +1,8 @@
 import boto3
 import json
 import os
+from campaign import Campaign
+
 
 
 def invoke_download_features(payload):
@@ -16,6 +18,9 @@ def invoke_download_features(payload):
 
 def lambda_handler(event, context):
     uuid = event['campaign_uuid']
-    payload = json.dumps({'campaign_uuid': uuid})
     
+    campaign = Campaign(uuid)
+    campaign.set_computing(True)
+
+    payload = json.dumps({'campaign_uuid': uuid})
     invoke_download_features(payload)
