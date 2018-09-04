@@ -103,3 +103,17 @@ class GeojsonFileManager(FileManager):
     def write_footer(self):
         self.remove_last_comma()
         self.fd.write(']}')
+
+class GeopointsFileManager(FileManager):
+    def __init__(self, destination):
+        self.filename = 'geopoints'
+        self.extension = 'js'
+        super(GeopointsFileManager, self).__init__(destination)
+    
+    def write_header(self):
+        self.fd.write("var geopoints_" + str(self.count) + " = [\n")
+        # self.fd.write('{"type": "FeatureCollection","features": [\n')
+
+    def write_footer(self):
+        self.remove_last_comma()
+        self.fd.write('];')

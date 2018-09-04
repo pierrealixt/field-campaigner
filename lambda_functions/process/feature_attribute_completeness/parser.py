@@ -4,7 +4,8 @@ import os
 import json
 from file_manager import (
     GeojsonFileManager,
-    ErrorsFileManager
+    ErrorsFileManager,
+    GeopointsFileManager
 )
 
 
@@ -25,6 +26,8 @@ class FeatureCompletenessParser(xml.sax.ContentHandler):
             destination=render_data_path)
         self.errors_file_manager = ErrorsFileManager(
             destination=render_data_path)
+        self.geopoints_file_manager = GeopointsFileManager(
+            destination=render_data_path)
 
     def startDocument(self):
         return
@@ -35,6 +38,10 @@ class FeatureCompletenessParser(xml.sax.ContentHandler):
         
         self.errors_file_manager.close()
         self.errors_file_manager.save()
+
+        self.geopoints_file_manager.close()
+        self.geopoints_file_manager.save()
+
 
     def startElement(self, name, attrs):
         if name in ['node', 'way', 'relation']:
@@ -67,6 +74,7 @@ class FeatureCompletenessParser(xml.sax.ContentHandler):
         if name == 'node':
             if self.has_tags == True:            
                 self.build_feature('node')
+                self.build_point('node')
                 self.tags = {}
             elif self.has_tags == False:
                 self.unused_nodes[self.element['id']] = [
@@ -75,6 +83,7 @@ class FeatureCompletenessParser(xml.sax.ContentHandler):
                 ]
         if name == 'way':
             self.build_feature('way')
+            self.build_point('way')
             self.tags = {}
 
     def build_element(self, name, attrs):
@@ -144,6 +153,17 @@ class FeatureCompletenessParser(xml.sax.ContentHandler):
         self.errors_file_manager.write(json.dumps(payload))
         self.errors_warnings += 1
 
+    def build_point(self, osm_type):
+        if osm_type == 'node':
+            point = [
+                float(self.element['lat']),
+                float(self.element['lon']),
+                self.set_color_completeness(),
+                self.build_popup()
+            ]
+            self.geopoints_file_manager.write(json.dumps(point))
+
+
     def build_feature(self, osm_type):
         if osm_type == 'node':
             geo_type = 'Point'
@@ -164,16 +184,58 @@ class FeatureCompletenessParser(xml.sax.ContentHandler):
                 "coordinates": coordinates
             },
             "properties": {
-                "type": self.element['type'],
-                "tags": self.tags,
-                "errors": self.errors_to_s,
-                "warnings": self.warnings_to_s,
+                # "type": self.element['type'],
+                # "tags": self.tags,
+                # "errors": self.errors_to_s,
+                # "warnings": self.warnings_to_s,
                 "completeness_color": self.set_color_completeness(),
-                "completeness_pct": '{pct}%'.format(pct=self.completeness_pct)
+                # "completeness_pct": '{pct}%'.format(pct=self.completeness_pct),
+                "popup": self.build_popup()
             },
             "id": self.element['id'],
         }
         self.geojson_file_manager.write(json.dumps(feature))
+
+    def build_popup(self):
+        link = "".join([
+            "<a href=\"{root}/{type}/{id}\" target=\"_blank\">",
+            "{root}/{type}/{id}</a>"]).format(
+                root="https://www.openstreetmap.org",
+                type=self.element['type'],
+                id=self.element['id'])
+
+        content = "{link}<br />".format(link=link);
+
+        el_type = "<b>type</b> : {type}".format(type=self.element['type'])
+        content += "{el_type}<br />".format(el_type=el_type)
+
+        if self.errors_to_s != None:
+            errors = "<div style='color:red'><b>errors</b> : {errors}</div>".format(
+                errors=self.errors_to_s)
+            content += errors;
+
+        if self.warnings_to_s != None:
+            warnings = "<div style='color:orange'><b>warnings</b> : {warnings}</div>".format(
+                warnings=self.warnings_to_s)
+            content += warnings;
+
+        tags = []
+        for tag in self.tags.items():
+            tag_to_s = "<b>{tag_key}</b> : {tag_value}".format(
+                tag_key=tag[0],
+                tag_value=tag[1])
+            tags.append(tag_to_s)
+
+        tags = "<br />".join(tags)
+  
+        content += "{tags}<br />".format(tags=tags)
+    
+        percentage = "<b>completeness</b> : {completeness_pct}%".format(
+            completeness_pct=self.completeness_pct)
+
+        content += percentage;
+
+        return content
 
     def set_color_completeness(self):
         if self.completeness_pct == 100:

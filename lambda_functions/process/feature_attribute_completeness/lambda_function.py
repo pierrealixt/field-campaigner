@@ -59,7 +59,8 @@ def lambda_handler(event, context):
         'features_completed': parser.features_completed,
         'checked_attributes': list(required_tags.keys()),
         'geojson_files_count': parser.geojson_file_manager.count,
-        'errors_files_count': parser.errors_file_manager.count
+        'errors_files_count': parser.errors_file_manager.count,
+        'geopoints_files_count': parser.geopoints_file_manager.count
     }
     save_data(uuid, type_id, processed_data)
     invoke_render_feature(uuid, feature)
