@@ -60,5 +60,5 @@ def lambda_handler(event, context):
             bucket=os.environ['S3_BUCKET'],
             uuid=uuid,
             type_id=type_id)
-
+    data['geopoints_url'] = "{url}/geopoints_1.js".format(url=data['url'])
     render_templates(template_path, data)

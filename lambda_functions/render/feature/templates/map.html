@@ -1,3 +1,5 @@
+<script src="{{ geopoints_url | safe }}"></script>
+
 <div id="campaign-map-detail"></div>
 <script type="text/javascript">
 
@@ -48,6 +50,31 @@
   }
 
   function renderMap(map) {
+    var markers = L.markerClusterGroup({chunkedLoading: true});    
+    var markerList = [];
+    $.ajax({
+        url: "{{ geopoints_url | safe }}",
+        dataType: 'script',
+        success: function(data) {
+          for (var i = 0; i < geopoints_1.length; i++) {
+            var point = geopoints_1[i];
+            var popup = point[3];
+            var marker = L.marker(L.latLng(point[0], point[1]));
+            marker.bindPopup(popup);
+            markerList.push(marker);
+          }
+
+          markers.addLayers(markerList);
+          map.addLayer(markers);
+          map.fitBounds(markers.getBounds());
+      }
+    });
+  }
+
+  function renderMapOld(map) {
+
+    var markers = L.markerClusterGroup({chunkedLoading: true});
+
     var geojsonFilesCount = {{ feature_completeness['geojson_files_count']}};
 
     for (var i = 1; i <= geojsonFilesCount; i++) {
@@ -56,7 +83,7 @@
         url: geojsonUrl,
         dataType: 'json',
         success: function(data) {
-          L.geoJSON(data, {
+          var geojsonLayer = L.geoJSON(data, {
             pointToLayer: function (feature, latlng) {
               return L.circle(latlng, {
                 radius: 5,
@@ -67,48 +94,21 @@
                 fillOpacity: 0.8
                 });
             },
-            onEachFeature: onEachFeature,
+            // onEachFeature: onEachFeature,
             style: function(feature) {
               return {color: feature.properties.completeness_color}
             }
-          }).addTo(map);
+          });
+          markers.addLayer(geojsonLayer);
+          map.addLayer(markers);
+          map.fitBounds(markers.getBounds());
         }
       });
     }
   }
 
   function onEachFeature(feature, layer) {
-    link = `<a href="https://www.openstreetmap.org/${feature.properties.type}/${feature.id}" target="_blank">https://www.openstreetmap.org/${feature.properties.type}/${feature.id}</a>`;
-    content = `${link}<br />`;
-
-    type = `<b>type</b> : ${feature.properties.type}`;
-    content += `${type}<br />`;
-
-    if (feature.properties.errors !== null) {
-      errors = `<div style='color:red'><b>errors</b> : ${feature.properties.errors}</div>`;
-      content += errors;
-    }
-
-    if (feature.properties.warnings !== null) {
-      warnings = `<div style='color:orange'><b>warnings</b> : ${feature.properties.warnings}</div>`
-      content += warnings;
-    }    
-
-    tags = []
-    for (var tag in feature.properties.tags) {
-      tag_to_s = `<b>${tag}</b> : ${feature.properties.tags[tag]}`
-      tags.push(tag_to_s)
-    }
-    tags = tags.join('<br />')
-  
-    content += `${tags}<br />`;
-    
-    percentage = `<b>completeness</b> : ${feature.properties.completeness_pct}`;
-
-    content += percentage;
-
-    
-    layer.bindPopup(content);
+    layer.bindPopup(feature.properties.popup);
   } 
 
 </script>
